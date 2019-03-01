@@ -1,7 +1,8 @@
 #!/bin/sh
 
 # Requires "perf" from "linux-tools" package
-# Usage sudo ./calculate.sh <.c/.cpp file>
+# Usage: 
+# $ sudo ./calculate.sh <.c/.cpp file>
 
 # Check if file exist
 if [ ! -f $1 ]; then
