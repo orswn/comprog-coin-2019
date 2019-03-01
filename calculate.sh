@@ -1,17 +1,24 @@
 #!/bin/sh
 
+# Requires "perf" from "linux-tools" package
+# Usage sudo ./calculate.sh <.c/.cpp file>
+
+# Check if file exist
 if [ ! -f $1 ]; then
     echo "File doesn't exist!"
     exit 1
 fi
 
-FILE=$1
-BASE=${FILE%.*}
-TYPE=${FILE#*.}
+# Define some variable
+FILE=$1         # "example.cpp"
+BASE=${FILE%.*} # "example"
+TYPE=${FILE#*.} # ".cpp"
 PERF="perf stat -r 100 --append -o $BASE.log "
 
+# Remove file from previous run
 rm $BASE $BASE.final $BASE.log >/dev/null 2>&1
 
+# Check file type for compilation command
 if [ "$TYPE" = "c" ]; then
     COMPILE="gcc -O0 -Wall -std=c11 -o $BASE $FILE"
 elif [ "$TYPE" = "cpp" ]; then
@@ -21,16 +28,19 @@ else
     exit 1
 fi
 
+# Run Compile command and execute
 $PERF $COMPILE
-$PERF ./$BASE >/dev/null
+$PERF ./$BASE
 
+# Get time from the log file and binary size from "du" command
 COMPTIME=$(awk '/elapsed/{print $1 * 1000}' $BASE.log | head -1)
 EXECTIME=$(awk '/elapsed/{print $1 * 1000}' $BASE.log | tail -1)
 EXECSIZE=$(echo "scale=2; $(du -b $BASE | cut -f1)/1000" | bc -l)
 
+# Output relevant information to stdout and .final file
 echo "
 File                    : $FILE
 Compile Time (100 runs) : $COMPTIME millisecond
 Execute Time (100 runs) : $EXECTIME millisecond
 Executable Size         : $EXECSIZE Bytes
-"
+" | tee $BASE.final
