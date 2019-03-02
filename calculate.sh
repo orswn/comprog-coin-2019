@@ -36,7 +36,7 @@ $PERF ./$BASE
 # Get time from the log file and binary size from "du" command
 COMPTIME=$(awk '/elapsed/{print $1}' $BASE.log | head -1)
 EXECTIME=$(awk '/elapsed/{print $1}' $BASE.log | tail -1)
-EXECSIZE=$(echo "scale=2; $(du -b $BASE | cut -f1)/1000" | bc -l)
+EXECSIZE=$(du -b $BASE | cut -f1)
 
 # Output relevant information to stdout and .final file
 echo "
