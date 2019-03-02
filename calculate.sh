@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Requires "perf" from "linux-tools" package
+# Requires gcc and "perf-stat" from "linux-tools" package
 # Usage: 
 # $ sudo ./calculate.sh <.c/.cpp file>
 
@@ -10,13 +10,16 @@ if [ ! -f $1 ]; then
     exit 1
 fi
 
-# Define some variable
-FILE=$1         # "example.cpp"
-BASE=${FILE%.*} # "example"
-TYPE=${FILE#*.} # ".cpp"
+# Split the file name
+FILE=$1             # "example.cpp"
+BASE=${FILE%.*}     # "example"
+TYPE=${FILE#*.}     # ".cpp"
+
+# perf stat with 100 runs and .log file to get
+# the average statistics of a command
 PERF="perf stat -r 100 --append -o $BASE.log "
 
-# Remove file from previous run
+# Remove files from previous run
 rm $BASE $BASE.final $BASE.log >/dev/null 2>&1
 
 # Check file type for compilation command
