@@ -1,50 +1,39 @@
-#!/bin/sh
+#!/bin/bash
 
-# Requires gcc and "perf-stat" from "linux-tools" package
-# Usage: 
-# $ sudo ./calculate.sh <.c/.cpp file>
+# This script will find all c and cpp files in the directory
+# and score them accordingly with scorer.sh script.
+# This script may need root access for the scorer.sh script.
+# usage:
+# # ./calculate.sh
 
-# Check if file exist
-if [ ! -f $1 ]; then
-    echo "File doesn't exist!"
-    exit 1
-fi
+# Remove score from previous run
+rm -f score >/dev/null 2>&1;
 
-# Split the file name
-FILE=$1             # "example.cpp"
-BASE=${FILE%.*}     # "example"
-TYPE=${FILE#*.}     # ".cpp"
+# For every cpp or c files
+for i in $(find * -name '*.cpp' -or -name "*.c" | sort); do
+    # Variables
+    SCORESUM=0
+    DIR=$(dirname $i)
+    PROBLEM=$(basename $i .cpp | grep -o '[0-9]*');
+    CASEDIR="Test-Cases/soal-$PROBLEM";
 
-# perf stat with 100 runs and .log file to get
-# the average statistics of a command
-PERF="perf stat -r 100 --append -o $BASE.log "
+    # Test against 5 testcases
+    for j in {1..5}; do
+        ./scorer.sh $i $CASEDIR/case$j.in $CASEDIR/case$j.out;
+    done
 
-# Remove files from previous run
-rm $BASE $BASE.final $BASE.log >/dev/null 2>&1
+    # Sum all the scores from every testcase
+    for k in $(find $DIR/*$PROBLEM-score -name '*.final' | sort); do
+        SCORESUM=$(echo "$SCORESUM + $(awk '/Score/{print $NF}' $k)" | bc -l);
+    done
+	
+	# Log the total scores to a file
+    echo "Problem $PROBLEM  : $SCORESUM " >> $DIR/score;
+done
 
-# Check file type for compilation command
-if [ "$TYPE" = "c" ]; then
-    COMPILE="gcc -O0 -Wall -std=c11 -o $BASE $FILE"
-elif [ "$TYPE" = "cpp" ]; then
-    COMPILE="g++ -O0 -Wall -std=c++11 -o $BASE $FILE"
-else
-    echo "File is not valid!"
-    exit 1
-fi
-
-# Run Compile command and execute
-$PERF $COMPILE
-$PERF ./$BASE
-
-# Get time from the log file and binary size from "du" command
-COMPTIME=$(awk '/elapsed/{print $1}' $BASE.log | head -1)
-EXECTIME=$(awk '/elapsed/{print $1}' $BASE.log | tail -1)
-EXECSIZE=$(du -b $BASE | cut -f1)
-
-# Output relevant information to stdout and .final file
-echo "
-File                    : $FILE
-Compile Time (100 runs) : $COMPTIME millisecond
-Execute Time (100 runs) : $EXECTIME millisecond
-Executable Size         : $EXECSIZE Bytes
-" | tee $BASE.final
+# Output all the scores
+for i in $(find . -name "score" | sort); do
+    echo $i
+    cat $i;
+    echo "";
+done | tee Final-Score.txt
